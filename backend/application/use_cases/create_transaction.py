@@ -14,7 +14,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from domain.entities.transaction import Transaction, TransactionType, PaymentMethod
+from domain.entities.transaction import Transaction, TransactionType, TransactionStatus, PaymentMethod
 from application.protocols.transaction_repository import TransactionRepository
 from application.use_cases.process_installment_purchase import (
     ProcessInstallmentPurchaseUseCase,

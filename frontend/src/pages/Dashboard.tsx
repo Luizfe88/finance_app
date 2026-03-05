@@ -50,22 +50,22 @@ function KPICard({ kpi, isCurrency = true, accent }) {
       opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)',
       transition: 'opacity 0.4s ease, transform 0.4s ease',
     }}>
-      {kpi.alert && (
+      {kpi?.alert && (
         <div style={{
           position: 'absolute', top: 0, right: 0, left: 0, height: 2,
           background: 'linear-gradient(90deg, #F59E0B, #EF4444)', borderRadius: '0 0 0 0',
         }} />
       )}
       <span className="summary-label" style={{ display: 'flex', alignItems: 'center' }}>
-        {kpi.label}
-        {kpi.alert && <span style={{ marginLeft: 6, fontSize: 12 }}>⚡</span>}
+        {kpi?.label}
+        {kpi?.alert && <span style={{ marginLeft: 6, fontSize: 12 }}>⚡</span>}
       </span>
       <span className="summary-value" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-        {isCurrency ? fmtBRL(kpi.value) : fmtPct(kpi.value)}
+        {isCurrency ? fmtBRL(kpi?.value) : fmtPct(kpi?.value)}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-        <TrendBadge vs_avg_pct={kpi.vs_avg_pct} trend={kpi.trend} />
-        {kpi.alert_message && (
+        <TrendBadge vs_avg_pct={kpi?.vs_avg_pct} trend={kpi?.trend} />
+        {kpi?.alert_message && (
           <span style={{ fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{kpi.alert_message}</span>
         )}
       </div>
@@ -273,6 +273,15 @@ export default function Dashboard() {
       setLoading(false);
     }
   }, []);
+
+  const handlePay = async (id: string) => {
+    try {
+      await api.transactions.execute(id);
+      load();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   useEffect(() => { load(); }, [load]);
 

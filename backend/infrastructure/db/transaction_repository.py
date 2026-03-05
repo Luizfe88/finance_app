@@ -14,7 +14,7 @@ from typing import Optional
 from sqlalchemy import select, func, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.transaction import Transaction, TransactionType, TransactionStatus
+from domain.entities.transaction import Transaction, TransactionType, TransactionStatus, TransactionRole, FundingState, PaymentMethod
 from application.protocols.transaction_repository import TransactionRepository
 from infrastructure.db.models import TransactionModel
 
@@ -41,8 +41,18 @@ class SQLAlchemyTransactionRepository:
             date=model.date,
             transaction_type=TransactionType(model.transaction_type),
             status=TransactionStatus(model.status),
-            memo=model.memo,
+            payment_method=PaymentMethod(model.payment_method),
+            envelope_id=model.envelope_id,
+            funding_state=FundingState(model.funding_state),
+            is_recurring=model.is_recurring,
+            recurrence_rule=model.recurrence_rule,
+            role=TransactionRole(model.role),
+            parent_id=model.parent_id,
+            installment_seq=model.installment_seq,
+            installment_total=model.installment_total,
+            idempotency_key=model.idempotency_key,
             fit_id=model.fit_id,
+            memo=model.memo,
             payee=model.payee,
             created_at=model.created_at,
             updated_at=model.updated_at,
@@ -61,8 +71,18 @@ class SQLAlchemyTransactionRepository:
             date=entity.date,
             transaction_type=entity.transaction_type.value,
             status=entity.status.value,
-            memo=entity.memo,
+            payment_method=entity.payment_method.value,
+            envelope_id=entity.envelope_id,
+            funding_state=entity.funding_state.value,
+            is_recurring=entity.is_recurring,
+            recurrence_rule=entity.recurrence_rule,
+            role=entity.role.value,
+            parent_id=entity.parent_id,
+            installment_seq=entity.installment_seq,
+            installment_total=entity.installment_total,
+            idempotency_key=entity.idempotency_key,
             fit_id=entity.fit_id,
+            memo=entity.memo,
             payee=entity.payee,
             created_at=entity.created_at,
             updated_at=entity.updated_at,

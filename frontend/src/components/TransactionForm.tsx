@@ -27,7 +27,9 @@ interface TransactionFormProps {
 
 const CATEGORIES = [
   'Alimentação', 'Transporte', 'Moradia', 'Saúde',
-  'Educação', 'Lazer', 'Roupas', 'Serviços', 'Outros'
+  'Educação', 'Lazer', 'Roupas', 'Serviços', 
+  'Investimentos', 'Presentes', 'Assinaturas', 'Pets',
+  'Trabalho', 'Viagem', 'Impostos', 'Outros', 'Outro...'
 ];
 
 const PAYMENT_METHODS = [
@@ -44,6 +46,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory] = useState('Outros');
+  const [customCategory, setCustomCategory] = useState('');
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH_PIX');
@@ -85,7 +88,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
           to_account_id: toAccountId,
           amount: parseFloat(amount.replace(',', '.')),
           description: description || 'Transferência',
-          category,
+          category: category === 'Outro...' ? customCategory : category,
           date: new Date(date).toISOString(),
           memo: memo || undefined,
         });
@@ -94,7 +97,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
           account_id: accountId,
           amount: parseFloat(amount.replace(',', '.')),
           description,
-          category,
+          category: category === 'Outro...' ? customCategory : category,
           date: new Date(date).toISOString(),
           transaction_type: type,
           payment_method: paymentMethod,
@@ -222,9 +225,21 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
           {type !== 'TRANSFER' && (
             <div className="form-group">
               <label className="form-label">Categoria Principal</label>
-              <select className="input" value={category} onChange={e => setCategory(e.target.value)} style={{ height: 48 }}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <select className="input" value={category} onChange={e => setCategory(e.target.value)} style={{ height: 48 }}>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {category === 'Outro...' && (
+                  <input 
+                    className="input fade-in" 
+                    placeholder="Digite o nome da categoria..."
+                    value={customCategory}
+                    onChange={e => setCustomCategory(e.target.value)}
+                    required
+                    style={{ height: 44, fontSize: 14 }}
+                  />
+                )}
+              </div>
             </div>
           )}
           <div className="form-group">

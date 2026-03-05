@@ -23,7 +23,9 @@ from typing import Optional, Protocol
 
 from dateutil.relativedelta import relativedelta
 
-from domain.entities.transaction import Transaction, TransactionType, FundingState
+from domain.entities.transaction import (
+    Transaction, TransactionType, TransactionStatus, TransactionRole, FundingState
+)
 from domain.entities.budget_envelope import BudgetEnvelope
 from domain.entities.subscription import Subscription
 from domain.entities.installment_group import InstallmentGroup
@@ -184,11 +186,16 @@ class GetDashboardV2UseCase:
 
         # ── Load 6 months of transactions (historical) ─────────────────────────
         hist_start = month_dt - relativedelta(months=5)
-        hist_end = month_dt + relativedelta(months=1) - timedelta(seconds=1)
+        # Extend end_date to catch future pending transactions for the 30-day commitment window
+        future_limit = now + timedelta(days=30)
+        month_end = month_dt + relativedelta(months=1) - timedelta(seconds=1)
+        hist_end = max(month_end, future_limit)
+
         all_txns = await self._transactions.list_by_user(
             user_id=user_id,
             start_date=hist_start,
             end_date=hist_end,
+            limit=2000,
         )
 
         # ── Monthly aggregates ─────────────────────────────────────────────────
@@ -341,8 +348,12 @@ class GetDashboardV2UseCase:
 
         upcoming.sort(key=lambda x: x.due_date)
 
-        # ── Recent transactions ────────────────────────────────────────────────
-        recent = sorted(all_txns, key=lambda t: t.date, reverse=True)[:10]
+        # ── Recent transactions (only past/present) ───────────────────────────
+        recent = sorted(
+            [t for t in all_txns if t.date <= now],
+            key=lambda t: t.date,
+            reverse=True
+        )[:10]
 
         # ── KPI cards with benchmark context ──────────────────────────────────
         def _vs_pct(curr: float, avg: float) -> float:
