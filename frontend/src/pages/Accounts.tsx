@@ -25,6 +25,7 @@ export default function Accounts() {
     bank_name: '',
     account_type: 'CHECKING',
     balance: '',
+    credit_limit: '',
     invoice_due_day: '',
     invoice_closing_day: '',
     masked_account_number: '****'
@@ -51,6 +52,9 @@ export default function Accounts() {
       const balanceValue = form.balance.toString().trim();
       const parsedBalance = balanceValue ? parseFloat(balanceValue.replace(',', '.')) : 0;
       
+      const limitValue = form.credit_limit.toString().trim();
+      const parsedLimit = limitValue ? parseFloat(limitValue.replace(',', '.')) : null;
+
       if (isNaN(parsedBalance)) {
         throw new Error('Valor de saldo inválido');
       }
@@ -59,6 +63,7 @@ export default function Accounts() {
         bank_name: form.bank_name,
         account_type: form.account_type,
         balance: parsedBalance,
+        credit_limit: parsedLimit,
         invoice_due_day: (form.invoice_due_day && !isNaN(parseInt(form.invoice_due_day))) ? parseInt(form.invoice_due_day) : null,
         invoice_closing_day: (form.invoice_closing_day && !isNaN(parseInt(form.invoice_closing_day))) ? parseInt(form.invoice_closing_day) : null,
         masked_account_number: form.masked_account_number || "****"
@@ -98,6 +103,7 @@ export default function Accounts() {
       bank_name: '',
       account_type: 'CHECKING',
       balance: '',
+      credit_limit: '',
       invoice_due_day: '',
       invoice_closing_day: '',
       masked_account_number: '****'
@@ -110,6 +116,7 @@ export default function Accounts() {
       bank_name: acc.bank_name,
       account_type: acc.account_type,
       balance: acc.balance.toString(),
+      credit_limit: acc.credit_limit?.toString() || '',
       invoice_due_day: acc.invoice_due_day?.toString() || '',
       invoice_closing_day: acc.invoice_closing_day?.toString() || '',
       masked_account_number: acc.masked_account_number
@@ -192,11 +199,22 @@ export default function Accounts() {
                     </p>
                     
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Saldo Atual</span>
-                      <span style={{ fontSize: 22, fontWeight: 800 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        {isCard ? 'Fatura Atual' : 'Saldo Atual'}
+                      </span>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: (isCard && acc.balance > 0) ? 'var(--color-expense)' : 'inherit' }}>
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(acc.balance)}
                       </span>
                     </div>
+
+                    {isCard && acc.credit_limit && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 4 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Limite Disponível</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(0, acc.credit_limit - acc.balance))}
+                        </span>
+                      </div>
+                    )}
 
                     {isCard && acc.invoice_due_day && (
                       <div style={{ 
@@ -204,12 +222,12 @@ export default function Accounts() {
                         display: 'flex', gap: 16, fontSize: 12
                       }}>
                         <div>
-                          <p style={{ color: 'var(--text-muted)' }}>Fatura vence dia</p>
-                          <p style={{ fontWeight: 700 }}>{acc.invoice_due_day}</p>
+                          <p style={{ color: 'var(--text-muted)' }}>Vencimento</p>
+                          <p style={{ fontWeight: 700 }}>Dia {acc.invoice_due_day}</p>
                         </div>
                         <div>
-                          <p style={{ color: 'var(--text-muted)' }}>Fecha dia</p>
-                          <p style={{ fontWeight: 700 }}>{acc.invoice_closing_day}</p>
+                          <p style={{ color: 'var(--text-muted)' }}>Fechamento</p>
+                          <p style={{ fontWeight: 700 }}>Dia {acc.invoice_closing_day}</p>
                         </div>
                       </div>
                     )}
@@ -254,7 +272,7 @@ function AccountFormLayout({ form, setForm, onSave, onCancel, error }: any) {
           </select>
         </div>
         <div className="form-group">
-          <label className="form-label">Saldo Inicial / Limite</label>
+          <label className="form-label">{isCard ? 'Saldo Devedor (Fatura)' : 'Saldo Atual'}</label>
           <input 
             className="input" 
             value={form.balance} 
@@ -262,6 +280,17 @@ function AccountFormLayout({ form, setForm, onSave, onCancel, error }: any) {
             placeholder="0,00"
           />
         </div>
+        {isCard && (
+          <div className="form-group">
+            <label className="form-label">Limite do Cartão</label>
+            <input 
+              className="input" 
+              value={form.credit_limit} 
+              onChange={e => setForm({...form, credit_limit: e.target.value})}
+              placeholder="0,00"
+            />
+          </div>
+        )}
       </div>
 
       {isCard && (

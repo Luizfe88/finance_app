@@ -3,8 +3,18 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const activeUserId = localStorage.getItem('activeUserId') || 'demo-user';
+  
+  const headers: Record<string, string> = { 
+    'Content-Type': 'application/json',
+    ...options.headers as any
+  };
+
+  // Add X-User-Id for dev mode
+  headers['X-User-Id'] = activeUserId;
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers,
     ...options,
   });
   if (!res.ok) {
@@ -25,8 +35,19 @@ export interface TransactionCreate {
   payment_method?: string;
   installment_count?: number;
   is_recurring?: boolean;
+  is_paid?: boolean;
   recurrence_rule?: string;
   envelope_id?: string;
+  memo?: string;
+}
+
+export interface TransferCreate {
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  date: string;
+  description: string;
+  category: string;
   memo?: string;
 }
 
@@ -42,6 +63,7 @@ export interface Account {
   is_active: boolean;
   invoice_due_day?: number;
   invoice_closing_day?: number;
+  credit_limit?: number;
   created_at: string;
 }
 
@@ -55,6 +77,8 @@ export const api = {
       return request<any>(`/transactions${q ? '?' + q : ''}`);
     },
     create: (body: TransactionCreate) => request<any>('/transactions', { method: 'POST', body: JSON.stringify(body) }),
+    execute: (id: string) => request<any>(`/transactions/${id}/execute`, { method: 'POST' }),
+    transfer: (body: TransferCreate) => request<any[]>('/transactions/transfer', { method: 'POST', body: JSON.stringify(body) }),
     delete: (id: string) => request<void>(`/transactions/${id}`, { method: 'DELETE' }),
   },
 
@@ -88,5 +112,10 @@ export const api = {
     token: (form: FormData) => request<any>('/auth/token', { method: 'POST', body: form }),
     register: (body: any) => request<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
     me: () => request<any>('/auth/me'),
+  },
+
+  users: {
+    list: () => request<any[]>('/users'),
+    create: (body: { email: string; name: string }) => request<any>('/users', { method: 'POST', body: JSON.stringify(body) }),
   }
 };

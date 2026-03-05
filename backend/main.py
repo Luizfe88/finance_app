@@ -101,6 +101,9 @@ def create_app() -> FastAPI:
     app.include_router(transactions.router, prefix=prefix)
     app.include_router(import_data.router, prefix=prefix)
     app.include_router(accounts.router, prefix=prefix)
+    
+    from interfaces.api.routers import users as users_router
+    app.include_router(users_router.router, prefix=prefix)
 
     # ── V2 Routers (Institutional Grade) ─────────────────────────────────────
     app.include_router(dashboard_router, prefix=prefix)         # /dashboard + /dashboard/v2

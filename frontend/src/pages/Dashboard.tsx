@@ -167,7 +167,15 @@ const CashFlowTooltip = ({ active, payload, label }) => {
 };
 
 // ── Commitment Row ────────────────────────────────────────────────────────────
-function CommitmentRow({ c }) {
+function CommitmentRow({ c, onPay }) {
+  const [loading, setLoading] = useState(false);
+
+  const handlePayClick = async () => {
+    setLoading(true);
+    await onPay(c.id);
+    setLoading(false);
+  };
+
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
@@ -176,9 +184,11 @@ function CommitmentRow({ c }) {
       <div style={{
         width: 36, height: 36, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center',
         justifyContent: 'center', fontSize: 16,
-        background: c.commitment_type === 'SUBSCRIPTION' ? 'rgba(99,102,241,0.15)' : 'rgba(16,185,129,0.15)',
+        background: c.commitment_type === 'SUBSCRIPTION' ? 'rgba(99,102,241,0.15)' : 
+                    c.commitment_type === 'INSTALLMENT' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
       }}>
-        {c.commitment_type === 'SUBSCRIPTION' ? '🔄' : '📦'}
+        {c.commitment_type === 'SUBSCRIPTION' ? '🔄' : 
+         c.commitment_type === 'INSTALLMENT' ? '📦' : '💸'}
       </div>
       <div style={{ flex: 1 }}>
         <p style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>{c.label}</p>
@@ -186,7 +196,19 @@ function CommitmentRow({ c }) {
           {c.is_overdue ? '⚠️ Vencido – ' : ''}{c.due_date}
         </p>
       </div>
-      <span style={{ fontWeight: 700, color: '#F59E0B' }}>{fmtBRL(c.amount)}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontWeight: 700, color: '#F59E0B' }}>{fmtBRL(c.amount)}</span>
+        {c.commitment_type === 'TRANSACTION' && (
+          <button 
+            className="btn btn-ghost" 
+            onClick={handlePayClick}
+            disabled={loading}
+            style={{ padding: '4px 8px', fontSize: 11, height: 28, background: 'rgba(16,185,129,0.1)', color: '#10B981', borderColor: 'rgba(16,185,129,0.2)' }}
+          >
+            {loading ? '...' : 'Pagar'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -196,9 +218,40 @@ const Skel = ({ h = 14, w = '100%', r = 8 }) => (
   <div className="skeleton" style={{ height: h, width: w, borderRadius: r }} />
 );
 
+interface UpcomingCommitment {
+  id: string;
+  label: string;
+  amount: number;
+  due_date: string;
+  commitment_type: 'INSTALLMENT' | 'SUBSCRIPTION' | 'TRANSACTION';
+  is_overdue: boolean;
+}
+
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+  transaction_type: 'CREDIT' | 'DEBIT' | 'TRANSFER';
+  installment_label?: string;
+  funding_state?: string;
+}
+
+interface DashboardData {
+  kpis: any;
+  envelope_health: any[];
+  cash_flow_projection: any[];
+  upcoming_commitments: UpcomingCommitment[];
+  recent_transactions: Transaction[];
+  meta?: { period_month: string };
+  _v1?: boolean;
+  summary?: any;
+}
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -289,13 +342,15 @@ export default function Dashboard() {
       </div>
 
       {/* ── TOPO: Ready to Assign Banner ── */}
-      {!loading && <ReadyToAssignBanner kpi={kpis.ready_to_assign} />}
+      <ReadyToAssignBanner kpi={kpis.ready_to_assign} /> {/* Removed !loading condition */}
 
       {/* ── 1. KPI STRIP (F-Pattern — top-left first) ── */}
-      <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', marginBottom: 24 }}>
+      <div className="summary-grid" style={{ display: 'flex', gap: 16, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
         {loading ? [1,2,3,4,5].map(i => (
-          <div key={i} className="summary-card balance">
-            <Skel h={12} w="60%" /><div style={{ height: 8 }} /><Skel h={28} w="80%" />
+          <div key={i} className="summary-card" style={{ minWidth: 200 }}>
+            <Skel h={12} w="40%" />
+            <div style={{ height: 8 }} />
+            <Skel h={24} w="70%" />
           </div>
         )) : (
           <>
@@ -316,7 +371,7 @@ export default function Dashboard() {
           <p className="chart-subtitle" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             Histórico + Projeção
             <span style={{ fontSize: 11, background: 'rgba(139,92,246,0.15)', color: '#8B5CF6', borderRadius: 4, padding: '2px 7px' }}>
-              ◌ meses projetados
+              {flow.filter(f => f.is_projected).length} meses projetados {/* Updated text */}
             </span>
           </p>
           {loading ? <Skel h={220} /> : (
@@ -411,7 +466,7 @@ export default function Dashboard() {
                 <p>Nenhum compromisso próximo</p>
               </div>
             ) : (
-              commitments.slice(0, 8).map(c => <CommitmentRow key={c.id} c={c} />)
+              commitments.slice(0, 8).map(c => <CommitmentRow key={c.id} c={c} onPay={handlePay} />)
             )
           }
         </div>

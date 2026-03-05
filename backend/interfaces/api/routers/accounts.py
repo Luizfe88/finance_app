@@ -31,6 +31,7 @@ def _model_to_out(m: AccountModel) -> AccountOut:
         is_active=m.is_active,
         invoice_due_day=m.invoice_due_day,
         invoice_closing_day=m.invoice_closing_day,
+        credit_limit=float(m.credit_limit) if m.credit_limit is not None else None,
         created_at=m.created_at,
     )
 
@@ -62,6 +63,7 @@ async def create_account(body: AccountCreate, user_id: str = Depends(get_current
         is_active=True,
         invoice_due_day=body.invoice_due_day,
         invoice_closing_day=body.invoice_closing_day,
+        credit_limit=Decimal(str(body.credit_limit)) if body.credit_limit is not None else None,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )

@@ -623,3 +623,39 @@ select.input {
   .summary-grid { grid-template-columns: 1fr; }
   .summary-value { font-size: 22px; }
 }
+/* ── User Switcher (Sidebar) ────────────────────────────────────────────── */
+.user-switcher {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.user-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394A3B8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 10px !important;
+  padding-right: 30px !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.user-select:hover {
+  border-color: var(--color-primary) !important;
+}
+
+.user-switcher .btn-primary {
+  font-size: 12px;
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.user-switcher input {
+  font-size: 12px;
+  padding: 6px;
+}

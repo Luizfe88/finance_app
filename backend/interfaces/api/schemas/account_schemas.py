@@ -23,6 +23,7 @@ class AccountOut(BaseModel):
     is_active: bool
     invoice_due_day: Optional[int] = None
     invoice_closing_day: Optional[int] = None
+    credit_limit: Optional[float] = None
     created_at: datetime
 
 
@@ -35,6 +36,7 @@ class AccountCreate(BaseModel):
     currency: str = "BRL"
     invoice_due_day: Optional[int] = None
     invoice_closing_day: Optional[int] = None
+    credit_limit: Optional[float] = None
 
 
 class AccountUpdate(BaseModel):
@@ -46,4 +48,5 @@ class AccountUpdate(BaseModel):
     currency: Optional[str] = None
     invoice_due_day: Optional[int] = None
     invoice_closing_day: Optional[int] = None
+    credit_limit: Optional[float] = None
 

@@ -13,7 +13,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -35,8 +35,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-async def get_current_user_id(token: Optional[str] = Depends(oauth2_scheme)) -> str:
-    """Dependency to retrieve the current user's ID. Falls back to demo-user for dev."""
+from fastapi import Depends, HTTPException, Request, status
+
+async def get_current_user_id(request: Request, token: Optional[str] = Depends(oauth2_scheme)) -> str:
+    """Dependency to retrieve the current user's ID. Supports X-User-Id header for dev."""
+    # Check for developer-mode override
+    user_id_override = request.headers.get("X-User-Id")
+    if user_id_override:
+        return user_id_override
+
     # In local development without a real login flow yet, we allow a fallback
     if not token:
         return "demo-user"

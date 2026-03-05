@@ -49,6 +49,7 @@ class TransactionCreate(BaseModel):
     payment_method: str = "CASH_PIX"
     installment_count: int = 1
     is_recurring: bool = False
+    is_paid: bool = True  # Default to True for backward compatibility
     recurrence_rule: Optional[str] = None
     envelope_id: Optional[str] = None
     memo: Optional[str] = None
@@ -62,6 +63,17 @@ class PaginatedTransactions(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
+
+class TransferCreate(BaseModel):
+    """Schema for account-to-account transfers."""
+    from_account_id: str
+    to_account_id: str
+    amount: float = Field(gt=0)
+    date: datetime
+    description: str = "Transferência"
+    category: str = "Outros"
+    memo: Optional[str] = None
 
 
 # ---- Dashboard Schemas (Recharts/ECharts ready) ----

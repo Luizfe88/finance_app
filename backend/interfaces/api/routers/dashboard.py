@@ -26,6 +26,7 @@ from application.use_cases.get_dashboard import GetDashboardUseCase
 from application.use_cases.get_dashboard_v2 import GetDashboardV2UseCase
 from infrastructure.db.database import get_session
 from infrastructure.db.transaction_repository import SQLAlchemyTransactionRepository
+from infrastructure.db.account_repository import SQLAlchemyAccountRepository
 from infrastructure.db.repositories_v2 import (
     SQLAlchemyEnvelopeRepository,
     SQLAlchemySubscriptionRepository,
@@ -104,12 +105,14 @@ async def get_dashboard_v2(
     env_repo = SQLAlchemyEnvelopeRepository(session)
     sub_repo = SQLAlchemySubscriptionRepository(session)
     inst_repo = SQLAlchemyInstallmentRepository(session)
+    acc_repo = SQLAlchemyAccountRepository(session)
 
     use_case = GetDashboardV2UseCase(
         transactions=txn_repo,
         envelopes=env_repo,
         subscriptions=sub_repo,
         installments=inst_repo,
+        accounts=acc_repo,
     )
     result = await use_case.execute(
         user_id=user_id,

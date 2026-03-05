@@ -35,6 +35,7 @@ class CreateTransactionInput:
     envelope_id: Optional[str] = None
     memo: Optional[str] = None
     is_recurring: bool = False
+    is_paid: bool = True
     recurrence_rule: Optional[str] = None
     installment_count: int = 1  # If > 1, triggers installment logic
 
@@ -81,6 +82,7 @@ class CreateTransactionUseCase:
             category=inp.category,
             date=inp.date,
             transaction_type=inp.transaction_type,
+            status=TransactionStatus.POSTED if inp.is_paid else TransactionStatus.PENDING,
             payment_method=inp.payment_method,
             envelope_id=inp.envelope_id,
             memo=inp.memo,

@@ -21,10 +21,13 @@ from infrastructure.db.account_repository import SQLAlchemyAccountRepository
 from application.use_cases.list_transactions import ListTransactionsUseCase, ListTransactionsInput
 from application.use_cases.create_transaction import CreateTransactionUseCase, CreateTransactionInput
 from application.use_cases.process_installment_purchase import ProcessInstallmentPurchaseUseCase
+from application.use_cases.execute_payment import ExecutePaymentUseCase
+from application.use_cases.create_transfer import CreateTransferUseCase, CreateTransferInput
 from domain.entities.transaction import Transaction, TransactionType, PaymentMethod
 from interfaces.api.schemas.transaction_schemas import (
     TransactionOut,
     TransactionCreate,
+    TransferCreate,
     PaginatedTransactions,
 )
 
@@ -119,6 +122,7 @@ async def create_transaction(
         envelope_id=body.envelope_id,
         memo=body.memo,
         is_recurring=body.is_recurring,
+        is_paid=body.is_paid,
         recurrence_rule=body.recurrence_rule,
         installment_count=body.installment_count
     ))
@@ -138,3 +142,41 @@ async def delete_transaction(
     deleted = await repo.delete(transaction_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Transaction not found")
+
+
+@router.post("/{transaction_id}/execute", response_model=TransactionOut, summary="Execute a pending payment")
+async def execute_payment(
+    transaction_id: str,
+    user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """Transition a PENDING transaction to POSTED."""
+    repo = SQLAlchemyTransactionRepository(session)
+    use_case = ExecutePaymentUseCase(repo)
+    try:
+        result = await use_case.execute(transaction_id)
+        return _entity_to_out(result)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/transfer", response_model=list[TransactionOut], summary="Create a transfer between accounts")
+async def create_transfer(
+    body: TransferCreate,
+    user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """Create a linked debit and credit for inter-account transfer."""
+    repo = SQLAlchemyTransactionRepository(session)
+    use_case = CreateTransferUseCase(repo)
+    result = await use_case.execute(CreateTransferInput(
+        user_id=user_id,
+        from_account_id=body.from_account_id,
+        to_account_id=body.to_account_id,
+        amount=Decimal(str(body.amount)),
+        date=body.date,
+        description=body.description,
+        category=body.category,
+        memo=body.memo
+    ))
+    return [_entity_to_out(t) for t in result.transactions]

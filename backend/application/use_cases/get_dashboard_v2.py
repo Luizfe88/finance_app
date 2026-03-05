@@ -53,6 +53,10 @@ class InstallmentRepo(Protocol):
     async def list_active_by_user(self, user_id: str) -> list[InstallmentGroup]: ...
 
 
+class AccountRepo(Protocol):
+    async def list_by_user(self, user_id: str, only_active: bool = True) -> list[Account]: ...
+
+
 # ── Output Schemas ─────────────────────────────────────────────────────────────
 @dataclass
 class KPICard:
@@ -161,11 +165,13 @@ class GetDashboardV2UseCase:
         envelopes: EnvelopeRepo,
         subscriptions: SubscriptionRepo,
         installments: InstallmentRepo,
+        accounts: AccountRepo,
     ) -> None:
         self._transactions = transactions
         self._envelopes = envelopes
         self._subscriptions = subscriptions
         self._installments = installments
+        self._accounts = accounts
 
     async def execute(
         self,
@@ -232,6 +238,19 @@ class GetDashboardV2UseCase:
             )
             for e in envelope_models
         ]
+
+        # ── Total Net Worth (Assets - CC Debts) ────────────────────────────────
+        user_accounts = await self._accounts.list_by_user(user_id=user_id)
+        total_assets = Decimal("0.00")
+        total_debts = Decimal("0.00")
+        for a in user_accounts:
+            if a.account_type.value == "CREDIT_CARD":
+                # We assume CC balance is positive debt (outstanding balance)
+                total_debts += abs(Decimal(str(a.balance)))
+            else:
+                total_assets += Decimal(str(a.balance))
+        
+        curr_net_worth = float(total_assets - total_debts)
 
         # ── Cash flow projection (3 months future) ────────────────────────────
         # Use avg of last 3 months as projection base
@@ -302,6 +321,24 @@ class GetDashboardV2UseCase:
                         commitment_type="INSTALLMENT",
                         is_overdue=due < now,
                     ))
+
+        # Add PENDING standalone transactions in the next 30 days
+        pending_txns = [
+            t for t in all_txns 
+            if t.status == TransactionStatus.PENDING 
+            and t.role == TransactionRole.STANDALONE
+            and t.date <= now + timedelta(days=30)
+        ]
+        for t in pending_txns:
+            upcoming.append(UpcomingCommitment(
+                id=t.id,
+                label=t.description,
+                amount=float(t.amount),
+                due_date=t.date.strftime("%Y-%m-%d"),
+                commitment_type="TRANSACTION",
+                is_overdue=t.date < now,
+            ))
+
         upcoming.sort(key=lambda x: x.due_date)
 
         # ── Recent transactions ────────────────────────────────────────────────
@@ -325,12 +362,12 @@ class GetDashboardV2UseCase:
             ),
             net_worth=KPICard(
                 label="Saldo Líquido",
-                value=curr_income - curr_expenses,
-                formatted=_fmt_brl(curr_income - curr_expenses),
-                vs_avg_pct=_vs_pct(curr_income - curr_expenses, avg_income - avg_expenses),
-                trend=_trend(curr_income - curr_expenses, avg_income - avg_expenses),
-                alert=(curr_income - curr_expenses) < 0,
-                alert_message="Saldo negativo este mês!" if (curr_income - curr_expenses) < 0 else "",
+                value=curr_net_worth,
+                formatted=_fmt_brl(curr_net_worth),
+                vs_avg_pct=0.0,  # Historical net worth tracking needed for vs_avg
+                trend="STABLE",
+                alert=curr_net_worth < 0,
+                alert_message="Seu saldo total está negativo!" if curr_net_worth < 0 else "",
             ),
             savings_rate=KPICard(
                 label="Taxa de Poupança",
