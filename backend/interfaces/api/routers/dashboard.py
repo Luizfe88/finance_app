@@ -33,7 +33,7 @@ from infrastructure.db.repositories_v2 import (
 )
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
-DEFAULT_USER_ID = "demo-user"
+from interfaces.api.dependencies.auth import get_current_user_id
 
 
 @router.get("")
@@ -46,7 +46,7 @@ async def get_dashboard(
     repo = SQLAlchemyTransactionRepository(session)
     use_case = GetDashboardUseCase(repository=repo)
     result = await use_case.execute(
-        user_id=DEFAULT_USER_ID,
+        user_id=user_id,
         account_id=account_id,
         months_back=months_back,
     )
@@ -110,7 +110,7 @@ async def get_dashboard_v2(
         installments=inst_repo,
     )
     result = await use_case.execute(
-        user_id=DEFAULT_USER_ID,
+        user_id=user_id,
         target_month=month,
     )
 

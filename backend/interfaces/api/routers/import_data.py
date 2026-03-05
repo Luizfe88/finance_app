@@ -22,7 +22,7 @@ from interfaces.api.schemas.transaction_schemas import ImportResultOut
 
 router = APIRouter(prefix="/import", tags=["Import"])
 
-DEMO_USER_ID = "demo-user-001"
+from interfaces.api.dependencies.auth import get_current_user_id
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -59,7 +59,7 @@ async def import_ofx(
         result = await use_case.execute(ImportOFXInput(
             file_bytes=file_bytes,
             account_id=account_id,
-            user_id=DEMO_USER_ID,
+            user_id=user_id,
         ))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -99,7 +99,7 @@ async def import_csv(
     result = await use_case.execute(ImportCSVInput(
         file_bytes=file_bytes,
         account_id=account_id,
-        user_id=DEMO_USER_ID,
+        user_id=user_id,
         column_mapping=column_mapping,
     ))
 

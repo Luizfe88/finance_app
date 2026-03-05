@@ -28,7 +28,7 @@ from application.use_cases.create_installment_group import (
 )
 
 router = APIRouter(prefix="/installments", tags=["Installments"])
-DEFAULT_USER_ID = "demo-user"
+from interfaces.api.dependencies.auth import get_current_user_id
 
 
 class InstallmentCreateRequest(BaseModel):
@@ -69,6 +69,7 @@ def _group_to_response(g: InstallmentGroup) -> InstallmentGroupResponse:
 @router.post("", response_model=dict, status_code=201)
 async def create_installment(
     body: InstallmentCreateRequest,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Create a normalized installment group with N child transactions."""
@@ -84,7 +85,7 @@ async def create_installment(
     try:
         start_date = datetime.strptime(body.start_date, "%Y-%m-%d")
         result = await use_case.execute(CreateInstallmentInput(
-            user_id=DEFAULT_USER_ID,
+            user_id=user_id,
             account_id=body.account_id,
             envelope_id=body.envelope_id,
             description=body.description,
@@ -105,21 +106,23 @@ async def create_installment(
 
 
 @router.get("", response_model=list[InstallmentGroupResponse])
-async def list_installments(session: AsyncSession = Depends(get_session)):
+async def list_installments(user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)):
     """List all active installment groups for the current user."""
     repo = SQLAlchemyInstallmentRepository(session)
-    groups = await repo.list_active_by_user(user_id=DEFAULT_USER_ID)
+    groups = await repo.list_active_by_user(user_id=user_id)
     return [_group_to_response(g) for g in groups]
 
 
 @router.get("/projection")
-async def get_installment_projection(session: AsyncSession = Depends(get_session)):
+async def get_installment_projection(user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)):
     """Calculate monthly cash flow impact of all active installments (6 months forward)."""
     from dateutil.relativedelta import relativedelta
     from collections import defaultdict
 
     repo = SQLAlchemyInstallmentRepository(session)
-    groups = await repo.list_active_by_user(user_id=DEFAULT_USER_ID)
+    groups = await repo.list_active_by_user(user_id=user_id)
 
     now = datetime.utcnow()
     monthly_impact: dict[str, float] = defaultdict(float)
@@ -151,12 +154,13 @@ async def get_installment_projection(session: AsyncSession = Depends(get_session
 @router.post("/{group_id}/cancel")
 async def cancel_installment(
     group_id: str,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Cancel an installment group (marks it as CANCELLED)."""
     repo = SQLAlchemyInstallmentRepository(session)
     group = await repo.find_by_id(group_id)
-    if not group or group.user_id != DEFAULT_USER_ID:
+    if not group or group.user_id != user_id:
         raise HTTPException(status_code=404, detail="Installment group not found.")
     group.cancel()
     await repo.save(group)

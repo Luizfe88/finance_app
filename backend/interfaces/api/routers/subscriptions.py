@@ -28,7 +28,7 @@ from domain.entities.subscription import Subscription, PaymentMethod, Subscripti
 from application.use_cases.billing_engine import BillingEngineService
 
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
-DEFAULT_USER_ID = "demo-user"
+from interfaces.api.dependencies.auth import get_current_user_id
 
 
 class SubscriptionCreate(BaseModel):
@@ -86,15 +86,17 @@ def _compute_next_billing(billing_day: int) -> datetime:
 
 
 @router.get("", response_model=list[SubscriptionResponse])
-async def list_subscriptions(session: AsyncSession = Depends(get_session)):
+async def list_subscriptions(user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session)):
     repo = SQLAlchemySubscriptionRepository(session)
-    subs = await repo.list_by_user(user_id=DEFAULT_USER_ID)
+    subs = await repo.list_by_user(user_id=user_id)
     return [_sub_to_response(s) for s in subs]
 
 
 @router.post("", response_model=SubscriptionResponse, status_code=201)
 async def create_subscription(
     body: SubscriptionCreate,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     try:
@@ -103,7 +105,7 @@ async def create_subscription(
         raise HTTPException(status_code=400, detail=f"Invalid payment_method: {body.payment_method}")
 
     sub = Subscription(
-        user_id=DEFAULT_USER_ID,
+        user_id=user_id,
         name=body.name, description=body.description,
         amount=body.amount, payment_method=method,
         account_id=body.account_id, envelope_id=body.envelope_id,
@@ -119,11 +121,12 @@ async def create_subscription(
 async def update_subscription(
     sub_id: str,
     body: SubscriptionUpdate,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     repo = SQLAlchemySubscriptionRepository(session)
     sub = await repo.find_by_id(sub_id)
-    if not sub or sub.user_id != DEFAULT_USER_ID:
+    if not sub or sub.user_id != user_id:
         raise HTTPException(status_code=404, detail="Subscription not found.")
 
     if body.name:
@@ -145,11 +148,12 @@ async def update_subscription(
 @router.delete("/{sub_id}", status_code=204)
 async def cancel_subscription(
     sub_id: str,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     repo = SQLAlchemySubscriptionRepository(session)
     sub = await repo.find_by_id(sub_id)
-    if not sub or sub.user_id != DEFAULT_USER_ID:
+    if not sub or sub.user_id != user_id:
         raise HTTPException(status_code=404, detail="Subscription not found.")
     sub.cancel()
     await repo.save(sub)
@@ -158,6 +162,7 @@ async def cancel_subscription(
 @router.post("/run-billing")
 async def run_billing_engine(
     dry_run: bool = False,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """
@@ -173,7 +178,7 @@ async def run_billing_engine(
         transactions=txn_repo,
         audit=audit_repo,
     )
-    result = await engine.run(user_id=DEFAULT_USER_ID, process_due=not dry_run)
+    result = await engine.run(user_id=user_id, process_due=not dry_run)
 
     return {
         "dry_run": dry_run,

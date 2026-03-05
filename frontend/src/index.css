@@ -15,8 +15,9 @@
 
   /* Semantic colors */
   --color-income:   #10B981;  /* Emerald — positive, growth */
-  --color-expense:  #F59E0B;  /* Amber — informative, not alarming */
-  --color-danger:   #EF4444;  /* Red — ONLY for negative balance */
+  --color-expense:  #EF4444;  /* Red — intense, per user request */
+  --color-warning:  #F59E0B;  /* Amber */
+  --color-danger:   #EF4444;  
   --color-neutral:  #6B7280;
 
   /* Surface & background */
@@ -389,7 +390,93 @@ body {
 .input::placeholder { color: var(--text-muted); }
 
 .form-group { display: flex; flex-direction: column; gap: var(--sp-2); }
-.form-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.form-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+
+/* ── Transaction Type Tabs ───────────────────────────────────────────────── */
+.txn-type-tabs {
+  display: flex;
+  background: var(--bg-elevated);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 4px;
+  margin-bottom: var(--sp-6);
+}
+
+.type-tab {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.type-tab.active.expense {
+  background: var(--color-expense);
+  color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.type-tab.active.income {
+  background: var(--color-income);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.type-tab:not(.active):hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+
+/* ── Custom Switches ─────────────────────────────────────────────────────── */
+.switch-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) 0;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--bg-elevated);
+  transition: .4s;
+  border-radius: 24px;
+  border: 1px solid var(--border-subtle);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; width: 18px;
+  left: 2px; bottom: 2px;
+  background-color: var(--text-secondary);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider { background-color: var(--color-primary); border-color: var(--color-primary); }
+input:checked + .slider:before { transform: translateX(20px); background-color: white; }
+
 
 /* ── Drop Zone ───────────────────────────────────────────────────────────── */
 .drop-zone {

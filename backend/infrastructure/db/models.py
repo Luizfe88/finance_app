@@ -31,12 +31,12 @@ import sqlalchemy as sa
 
 from infrastructure.db.database import Base
 from domain.entities.transaction import (
-    TransactionType, TransactionStatus, TransactionRole, FundingState,
+    TransactionType, TransactionStatus, TransactionRole, FundingState, PaymentMethod,
 )
 from domain.entities.account import AccountType
 from domain.entities.audit_event import AuditEventType
 from domain.entities.installment_group import InstallmentGroupStatus
-from domain.entities.subscription import PaymentMethod, SubscriptionStatus
+from domain.entities.subscription import SubscriptionStatus
 
 
 # ── Transactions ───────────────────────────────────────────────────────────────
@@ -61,6 +61,11 @@ class TransactionModel(Base):
         nullable=False,
         default=TransactionStatus.POSTED
     )
+    payment_method = Column(
+        SAEnum(PaymentMethod, name="paymentmethod"),
+        nullable=False,
+        default=PaymentMethod.CASH_PIX
+    )
 
     # ── ZBB / Double-Entry (v2) ────────────────────────────────────────────────
     envelope_id = Column(String(36), nullable=True, index=True)          # → budget_envelopes.id
@@ -69,6 +74,10 @@ class TransactionModel(Base):
         nullable=False,
         default=FundingState.NOT_APPLICABLE,
     )
+
+    # ── Recurrence (v2) ────────────────────────────────────────────────────────
+    is_recurring = Column(Boolean, nullable=False, default=False)
+    recurrence_rule = Column(Text, nullable=True)
 
     # ── Installment Normalization (v2) ─────────────────────────────────────────
     role = Column(
@@ -121,6 +130,8 @@ class AccountModel(Base):
     # ── Credit Card specific (v2) ──────────────────────────────────────────────
     credit_limit = Column(Numeric(precision=15, scale=2), nullable=True)
     card_payment_envelope_id = Column(String(36), nullable=True)         # → budget_envelopes.id
+    invoice_due_day = Column(Integer, nullable=True)
+    invoice_closing_day = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -39,8 +39,9 @@ CORS_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup (idempotent — safe in development)."""
-    await create_all_tables()
+    """Lifespan context manager (tables are now created via Alembic migrations)."""
+    # Create tables on startup is disabled in favor of Alembic migrations.
+    # await create_all_tables()
     yield
 
 
@@ -72,7 +73,7 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
@@ -80,6 +81,8 @@ def create_app() -> FastAPI:
     prefix = os.getenv("API_PREFIX", "/api/v1")
 
     # ── V1 Routers (backward compatible) ─────────────────────────────────────
+    from interfaces.api.routers import auth as auth_router
+    app.include_router(auth_router.router, prefix=prefix)
     app.include_router(transactions.router, prefix=prefix)
     app.include_router(import_data.router, prefix=prefix)
     app.include_router(accounts.router, prefix=prefix)

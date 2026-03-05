@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
+import TransactionForm from '../components/TransactionForm';
+import { Plus } from 'lucide-react';
 
 const fmtDate = (d) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 const fmtCur  = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -36,6 +38,7 @@ export default function Transactions() {
   const [page, setPage]       = useState(0);
   const [deleting, setDeleting] = useState(null);
   const [toast, setToast]     = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   const LIMIT = 20;
 
@@ -91,7 +94,26 @@ export default function Transactions() {
             {data ? `${data.total} transações no total` : '...'}
           </p>
         </div>
+        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+          <Plus size={18} />
+          Nova Transação
+        </button>
       </div>
+
+      {showForm && (
+        <div className="fade-in" style={{ 
+          marginBottom: 40, 
+          padding: '24px', 
+          background: 'rgba(99,102,241,0.02)', 
+          borderRadius: 'var(--radius-xl)',
+          border: '1px dashed var(--border-primary)'
+        }}>
+          <TransactionForm 
+            onSuccess={() => { setShowForm(false); showToast('✅ Transação criada'); load(); }}
+            onCancel={() => setShowForm(false)}
+          />
+        </div>
+      )}
 
       {/* Filters */}
       <div className="filter-bar">

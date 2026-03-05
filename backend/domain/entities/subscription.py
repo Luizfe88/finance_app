@@ -21,11 +21,7 @@ from typing import Optional
 import uuid
 
 
-class PaymentMethod(str, Enum):
-    PIX = "PIX"
-    CREDIT_CARD = "CREDIT_CARD"
-    DEBIT = "DEBIT"
-    BOLETO = "BOLETO"
+from domain.entities.transaction import PaymentMethod
 
 
 class SubscriptionStatus(str, Enum):

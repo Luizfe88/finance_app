@@ -27,7 +27,7 @@ from application.use_cases.allocate_funds import AllocateFundsUseCase, AllocateF
 router = APIRouter(prefix="/budget", tags=["Budget (ZBB)"])
 
 # ── Temporary auth stub (replace with JWT in production) ──────────────────────
-DEFAULT_USER_ID = "demo-user"
+from interfaces.api.dependencies.auth import get_current_user_id
 
 
 # ── Pydantic Schemas ───────────────────────────────────────────────────────────
@@ -80,24 +80,26 @@ def _env_to_response(e: BudgetEnvelope) -> EnvelopeResponse:
 @router.get("/envelopes", response_model=list[EnvelopeResponse])
 async def list_envelopes(
     month: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """List all budget envelopes for a given month (YYYY-MM). Defaults to current month."""
     month = month or datetime.utcnow().strftime("%Y-%m")
     repo = SQLAlchemyEnvelopeRepository(session)
-    envelopes = await repo.list_by_user_month(user_id=DEFAULT_USER_ID, month=month)
+    envelopes = await repo.list_by_user_month(user_id=user_id, month=month)
     return [_env_to_response(e) for e in envelopes]
 
 
 @router.post("/envelopes", response_model=EnvelopeResponse, status_code=201)
 async def create_envelope(
     body: EnvelopeCreate,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Create a new budget envelope for a month."""
     repo = SQLAlchemyEnvelopeRepository(session)
     env = BudgetEnvelope(
-        user_id=DEFAULT_USER_ID,
+        user_id=user_id,
         name=body.name, icon=body.icon, color=body.color,
         month=body.month, allocated=body.allocated,
     )
@@ -108,6 +110,7 @@ async def create_envelope(
 @router.post("/allocate", response_model=AllocateResponse)
 async def allocate_funds(
     body: AllocateRequest,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Move funds from one envelope to another (e.g., Pronto para Atribuir → Alimentação)."""
@@ -122,7 +125,7 @@ async def allocate_funds(
     )
     try:
         result = await use_case.execute(AllocateFundsInput(
-            user_id=DEFAULT_USER_ID,
+            user_id=user_id,
             source_envelope_id=body.source_envelope_id,
             target_envelope_id=body.target_envelope_id,
             amount=body.amount,
@@ -141,13 +144,14 @@ async def allocate_funds(
 @router.get("/ready-to-assign")
 async def get_ready_to_assign(
     month: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Get the current Pronto para Atribuir balance — the ZBB control metric."""
     month = month or datetime.utcnow().strftime("%Y-%m")
     repo = SQLAlchemyEnvelopeRepository(session)
     env = await repo.find_by_name_and_month(
-        user_id=DEFAULT_USER_ID,
+        user_id=user_id,
         name=SystemEnvelope.READY_TO_ASSIGN,
         month=month,
     )
@@ -164,12 +168,13 @@ async def get_ready_to_assign(
 @router.post("/ensure-system")
 async def ensure_system_envelopes(
     month: Optional[str] = None,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Bootstrap system envelopes (Pronto para Atribuir, Pagamento CC) for a month."""
     month = month or datetime.utcnow().strftime("%Y-%m")
     repo = SQLAlchemyEnvelopeRepository(session)
-    created = await repo.ensure_system_envelopes(user_id=DEFAULT_USER_ID, month=month)
+    created = await repo.ensure_system_envelopes(user_id=user_id, month=month)
     return {
         "month": month,
         "created_count": len(created),

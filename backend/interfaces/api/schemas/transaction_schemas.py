@@ -27,6 +27,11 @@ class TransactionOut(BaseModel):
     date: datetime
     transaction_type: str
     status: str
+    payment_method: str
+    is_recurring: bool = False
+    role: str = "STANDALONE"
+    installment_seq: Optional[int] = None
+    installment_total: Optional[int] = None
     memo: Optional[str] = None
     payee: Optional[str] = None
     created_at: datetime
@@ -41,6 +46,11 @@ class TransactionCreate(BaseModel):
     category: str = "Outros"
     date: datetime
     transaction_type: str = Field(pattern="^(CREDIT|DEBIT|TRANSFER)$")
+    payment_method: str = "CASH_PIX"
+    installment_count: int = 1
+    is_recurring: bool = False
+    recurrence_rule: Optional[str] = None
+    envelope_id: Optional[str] = None
     memo: Optional[str] = None
     payee: Optional[str] = None
 

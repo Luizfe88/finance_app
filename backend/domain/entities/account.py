@@ -50,6 +50,8 @@ class Account:
     # --- Credit Card specific (v2) ---
     credit_limit: Optional[Decimal] = None        # Total credit limit (e.g., R$5000)
     card_payment_envelope_id: Optional[str] = None # BudgetEnvelope for CC payments
+    invoice_due_day: Optional[int] = None         # Day of month the invoice is due (1-31)
+    invoice_closing_day: Optional[int] = None     # Day of month the invoice closes (1-31)
 
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)

@@ -17,8 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.db.database import get_session
 from infrastructure.db.transaction_repository import SQLAlchemyTransactionRepository
+from infrastructure.db.account_repository import SQLAlchemyAccountRepository
 from application.use_cases.list_transactions import ListTransactionsUseCase, ListTransactionsInput
-from domain.entities.transaction import Transaction, TransactionType
+from application.use_cases.create_transaction import CreateTransactionUseCase, CreateTransactionInput
+from application.use_cases.process_installment_purchase import ProcessInstallmentPurchaseUseCase
+from domain.entities.transaction import Transaction, TransactionType, PaymentMethod
 from interfaces.api.schemas.transaction_schemas import (
     TransactionOut,
     TransactionCreate,
@@ -28,7 +31,7 @@ from interfaces.api.schemas.transaction_schemas import (
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
 # Demo user ID (replace with JWT auth in production)
-DEMO_USER_ID = "demo-user-001"
+from interfaces.api.dependencies.auth import get_current_user_id
 
 
 def _entity_to_out(t: Transaction) -> TransactionOut:
@@ -43,6 +46,11 @@ def _entity_to_out(t: Transaction) -> TransactionOut:
         date=t.date,
         transaction_type=t.transaction_type.value,
         status=t.status.value,
+        payment_method=t.payment_method.value,
+        is_recurring=t.is_recurring,
+        role=t.role.value,
+        installment_seq=t.installment_seq,
+        installment_total=t.installment_total,
         memo=t.memo,
         payee=t.payee,
         created_at=t.created_at,
@@ -57,8 +65,9 @@ async def list_transactions(
     end_date: Optional[datetime] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
-):
+) :
     """
     List transactions with filtering and pagination.
     Returns chart-ready metadata alongside items.
@@ -66,7 +75,7 @@ async def list_transactions(
     repo = SQLAlchemyTransactionRepository(session)
     use_case = ListTransactionsUseCase(repo)
     result = await use_case.execute(ListTransactionsInput(
-        user_id=DEMO_USER_ID,
+        user_id=user_id,
         account_id=account_id,
         category=category,
         start_date=start_date,
@@ -86,29 +95,42 @@ async def list_transactions(
 @router.post("", response_model=TransactionOut, status_code=201, summary="Create a transaction")
 async def create_transaction(
     body: TransactionCreate,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
-    """Manually create a single transaction."""
-    repo = SQLAlchemyTransactionRepository(session)
-    transaction = Transaction(
-        user_id=DEMO_USER_ID,
+    """Manually create a single transaction or installments."""
+    txn_repo = SQLAlchemyTransactionRepository(session)
+    acc_repo = SQLAlchemyAccountRepository(session)
+    
+    # Setup use cases
+    installment_use_case = ProcessInstallmentPurchaseUseCase(txn_repo, acc_repo)
+    create_use_case = CreateTransactionUseCase(txn_repo, installment_use_case)
+    
+    # Execute
+    result = await create_use_case.execute(CreateTransactionInput(
+        user_id=user_id,
         account_id=body.account_id,
         amount=Decimal(str(body.amount)),
-        currency=body.currency,
         description=body.description,
         category=body.category,
         date=body.date,
         transaction_type=TransactionType(body.transaction_type),
+        payment_method=PaymentMethod(body.payment_method),
+        envelope_id=body.envelope_id,
         memo=body.memo,
-        payee=body.payee,
-    )
-    saved = await repo.save(transaction)
-    return _entity_to_out(saved)
+        is_recurring=body.is_recurring,
+        recurrence_rule=body.recurrence_rule,
+        installment_count=body.installment_count
+    ))
+    
+    # Return the first transaction
+    return _entity_to_out(result.transactions[0])
 
 
 @router.delete("/{transaction_id}", status_code=204, summary="Delete a transaction")
 async def delete_transaction(
     transaction_id: str,
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Delete a transaction by ID."""

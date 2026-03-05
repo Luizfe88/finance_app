@@ -17,7 +17,7 @@ from infrastructure.db.repositories_v2 import SQLAlchemyAuditRepository
 from domain.entities.audit_event import AuditEvent
 
 router = APIRouter(prefix="/audit", tags=["Audit Trail"])
-DEFAULT_USER_ID = "demo-user"
+from interfaces.api.dependencies.auth import get_current_user_id
 
 
 class AuditEventResponse(BaseModel):
@@ -49,18 +49,19 @@ async def list_audit_events(
     """Read-only audit trail with tamper-detection status per event."""
     repo = SQLAlchemyAuditRepository(session)
     events = await repo.list_by_user(
-        user_id=DEFAULT_USER_ID, limit=limit, offset=offset
+        user_id=user_id, limit=limit, offset=offset
     )
     return [_event_to_response(e) for e in events]
 
 
 @router.get("/verify")
 async def verify_audit_integrity(
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Verify SHA-256 checksum integrity of the most recent 100 audit events."""
     repo = SQLAlchemyAuditRepository(session)
-    events = await repo.list_by_user(user_id=DEFAULT_USER_ID, limit=100)
+    events = await repo.list_by_user(user_id=user_id, limit=100)
 
     total = len(events)
     valid = sum(1 for e in events if e.verify_integrity())

@@ -42,6 +42,20 @@ class TransactionRole(str, Enum):
     SUBSCRIPTION = "SUBSCRIPTION"           # Auto-generated from billing engine
 
 
+class PaymentMethod(str, Enum):
+    """Unified payment method for transactions and subscriptions."""
+    CASH_PIX = "CASH_PIX"
+    CREDIT_CARD = "CREDIT_CARD"
+    DEBIT_CARD = "DEBIT_CARD"
+    BOLETO_TRANSFER = "BOLETO_TRANSFER"
+    OTHER = "OTHER"
+    
+    # Aliases for subscription backward compatibility if needed in logic
+    PIX = "CASH_PIX"
+    DEBIT = "DEBIT_CARD"
+    BOLETO = "BOLETO_TRANSFER"
+
+
 class FundingState(str, Enum):
     """
     Credit Card Liquidity Reserve State.
@@ -106,10 +120,15 @@ class Transaction:
     date: datetime = field(default_factory=datetime.utcnow)
     transaction_type: TransactionType = TransactionType.DEBIT
     status: TransactionStatus = TransactionStatus.POSTED
+    payment_method: PaymentMethod = PaymentMethod.CASH_PIX
 
     # --- ZBB / Double-Entry ---
     envelope_id: Optional[str] = None         # Linked BudgetEnvelope
     funding_state: FundingState = FundingState.NOT_APPLICABLE
+
+    # --- Recurrence ---
+    is_recurring: bool = False
+    recurrence_rule: Optional[str] = None     # e.g., "FREQ=MONTHLY;INTERVAL=1"
 
     # --- Installment Normalization ---
     role: TransactionRole = TransactionRole.STANDALONE

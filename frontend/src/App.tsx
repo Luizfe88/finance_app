@@ -1,13 +1,14 @@
-import { useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
+import Accounts from './pages/Accounts';
 import Import from './pages/Import';
 
 function Sidebar() {
   const navItems = [
     { to: '/',             icon: '📊', label: 'Dashboard'   },
     { to: '/transactions', icon: '💸', label: 'Transações'  },
+    { to: '/accounts',     icon: '💳', label: 'Contas & Cartões' },
     { to: '/import',       icon: '📂', label: 'Importar'    },
   ];
 
@@ -44,6 +45,7 @@ export default function App() {
           <Routes>
             <Route path="/"             element={<Dashboard />}    />
             <Route path="/transactions" element={<Transactions />} />
+            <Route path="/accounts"     element={<Accounts />}     />
             <Route path="/import"       element={<Import />}       />
           </Routes>
         </main>
