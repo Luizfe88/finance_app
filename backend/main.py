@@ -39,9 +39,24 @@ CORS_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager (tables are now created via Alembic migrations)."""
-    # Create tables on startup is disabled in favor of Alembic migrations.
-    # await create_all_tables()
+    """Lifespan context manager: ensures a demo user exists for local dev."""
+    from infrastructure.db.database import AsyncSessionLocal
+    from infrastructure.db.models import UserModel
+    from sqlalchemy.future import select
+    
+    async with AsyncSessionLocal() as session:
+        stmt = select(UserModel).where(UserModel.id == "demo-user")
+        result = await session.execute(stmt)
+        if not result.scalars().first():
+            print("Creating demo user...")
+            demo = UserModel(
+                id="demo-user",
+                email="demo@example.com",
+                hashed_password="...", # Not used for demo bypass
+                name="Demo User"
+            )
+            session.add(demo)
+            await session.commit()
     yield
 
 

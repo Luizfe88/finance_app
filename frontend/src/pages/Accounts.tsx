@@ -45,14 +45,26 @@ export default function Accounts() {
   useEffect(() => { load(); }, []);
 
   const handleSave = async (id?: string) => {
+    console.log('handleSave called', { id, form });
+    setError(null);
     try {
+      const balanceValue = form.balance.toString().trim();
+      const parsedBalance = balanceValue ? parseFloat(balanceValue.replace(',', '.')) : 0;
+      
+      if (isNaN(parsedBalance)) {
+        throw new Error('Valor de saldo inválido');
+      }
+
       const payload: any = {
         bank_name: form.bank_name,
         account_type: form.account_type,
-        balance: parseFloat(form.balance.toString().replace(',', '.')),
-        invoice_due_day: form.invoice_due_day ? parseInt(form.invoice_due_day.toString()) : null,
-        invoice_closing_day: form.invoice_closing_day ? parseInt(form.invoice_closing_day.toString()) : null,
+        balance: parsedBalance,
+        invoice_due_day: (form.invoice_due_day && !isNaN(parseInt(form.invoice_due_day))) ? parseInt(form.invoice_due_day) : null,
+        invoice_closing_day: (form.invoice_closing_day && !isNaN(parseInt(form.invoice_closing_day))) ? parseInt(form.invoice_closing_day) : null,
+        masked_account_number: form.masked_account_number || "****"
       };
+
+      console.log('Sending payload:', payload);
 
       if (id) {
         await api.accounts.update(id, payload);
@@ -60,11 +72,13 @@ export default function Accounts() {
         await api.accounts.create(payload);
       }
 
+      console.log('Save successful');
       setEditingId(null);
       setShowAddForm(false);
       load();
       resetForm();
     } catch (e: any) {
+      console.error('Save error:', e);
       setError(e.message || 'Erro ao salvar conta');
     }
   };

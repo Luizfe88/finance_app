@@ -40,6 +40,7 @@ from interfaces.api.dependencies.auth import get_current_user_id
 async def get_dashboard(
     months_back: int = Query(default=6, ge=1, le=24),
     account_id: Optional[str] = Query(default=None),
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """Dashboard v1 — backward compatible (reactive tracking)."""
@@ -86,6 +87,7 @@ async def get_dashboard_v2(
         description="Target month (YYYY-MM). Defaults to current month.",
         regex=r"^\d{4}-\d{2}$"
     ),
+    user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_session),
 ):
     """

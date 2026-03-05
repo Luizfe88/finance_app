@@ -49,6 +49,7 @@ async def create_account(body: AccountCreate, user_id: str = Depends(get_current
     session: AsyncSession = Depends(get_session)):
     import uuid
     from datetime import datetime
+    print(f"Creating account for user {user_id}: {body.bank_name}")
     model = AccountModel(
         id=str(uuid.uuid4()),
         user_id=user_id,
@@ -64,9 +65,13 @@ async def create_account(body: AccountCreate, user_id: str = Depends(get_current
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
+    print("Adding model to session...")
     session.add(model)
+    print("Committing session...")
     await session.commit()
+    print("Commit successful. Refreshing...")
     await session.refresh(model)
+    print("Refresh successful. Returning.")
     return _model_to_out(model)
 
 
